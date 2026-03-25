@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+import json
 from pathlib import Path
 from typing import Protocol
 
@@ -217,9 +218,14 @@ ${BASE_URL}    http://127.0.0.1:8010
         if browser_status is not None:
             statuses.append(browser_status)
 
-        if statuses and all(status == "passed" for status in statuses):
+        effective_statuses = [status for status in statuses if status != "skipped"]
+
+        if not effective_statuses:
+            return RunStatus.PARTIAL_SUCCESS
+
+        if all(status == "passed" for status in effective_statuses):
             return RunStatus.PASSED
-        if statuses and all(status == "failed" for status in statuses):
+        if all(status == "failed" for status in effective_statuses):
             return RunStatus.FAILED
         return RunStatus.PARTIAL_SUCCESS
 
@@ -228,10 +234,19 @@ def create_run_service() -> RunService:
     settings = get_settings()
     artifact_store = ArtifactStore(settings.artifact_root)
     run_store = RunStore()
+    try:
+        mcp_args = json.loads(settings.mcp_browser_args_json)
+        if not isinstance(mcp_args, list):
+            mcp_args = []
+    except json.JSONDecodeError:
+        mcp_args = []
+
     browser_executor = create_browser_executor(
         settings.browser_executor,
         fake_outcome=settings.browser_fake_outcome,
-        mcp_endpoint=settings.mcp_browser_endpoint,
+        mcp_command=settings.mcp_browser_command,
+        mcp_args=[str(value) for value in mcp_args],
+        mcp_tool_name=settings.mcp_browser_tool_name,
         mcp_timeout_seconds=settings.mcp_browser_timeout_seconds,
     )
     return RunService(artifact_store=artifact_store, run_store=run_store, settings=settings, browser_executor=browser_executor)

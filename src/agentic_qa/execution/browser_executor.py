@@ -117,22 +117,49 @@ class MCPBrowserExecutor(BrowserExecutor):
             f"MCP browser executor\navailable={response.available}\nsuccess={response.success}\nstdout={response.stdout}\nstderr={response.stderr}\n",
             encoding="utf-8",
         )
-        result_path.write_text(
-            json.dumps(
-                {
-                    "available": response.available,
-                    "success": response.success,
-                    "metadata": response.metadata,
-                },
-                indent=2,
-            ),
-            encoding="utf-8",
-        )
+
+        materialized_artifacts: dict[str, Path] = {"browser_log": log_path}
+        result_payload = {
+            "available": response.available,
+            "success": response.success,
+            "metadata": response.metadata,
+        }
+        materialization_error: str | None = None
+        raw_browser_result: str | None = None
+        if "browser_result_json" in response.artifacts:
+            raw_browser_result = str(response.artifacts["browser_result_json"])
+            try:
+                result_payload["browser_result"] = json.loads(raw_browser_result)
+            except json.JSONDecodeError:
+                materialization_error = "mcp browser result artifact was malformed json"
+                result_payload["materialization_error"] = materialization_error
+                result_payload["raw_browser_result"] = raw_browser_result
+        result_path.write_text(json.dumps(result_payload, indent=2), encoding="utf-8")
+        materialized_artifacts["browser_result_json"] = result_path
+
+        for name, artifact in response.artifacts.items():
+            if name == "browser_result_json":
+                continue
+            if name == "browser_screenshot" and isinstance(artifact, bytes):
+                screenshot_path = browser_dir / "browser_screenshot.png"
+                screenshot_path.write_bytes(artifact)
+                materialized_artifacts[name] = screenshot_path
+            elif name == "browser_trace_json":
+                trace_path = browser_dir / "browser_trace.json"
+                trace_path.write_text(str(artifact), encoding="utf-8")
+                materialized_artifacts[name] = trace_path
+
+        if materialization_error is not None:
+            return BrowserExecutionResult(
+                metrics=ExecutionMetrics(status="skipped", passed=0, failed=0, exit_code=0),
+                artifacts=materialized_artifacts,
+                errors=[materialization_error],
+            )
 
         if not response.available:
             return BrowserExecutionResult(
                 metrics=ExecutionMetrics(status="skipped", passed=0, failed=0, exit_code=0),
-                artifacts={"browser_log": log_path, "browser_result_json": result_path},
+                artifacts=materialized_artifacts,
                 errors=[response.stderr or "mcp browser executor unavailable"],
             )
 
@@ -143,14 +170,29 @@ class MCPBrowserExecutor(BrowserExecutor):
                 failed=0 if response.success else 1,
                 exit_code=0 if response.success else 1,
             ),
-            artifacts={"browser_log": log_path, "browser_result_json": result_path},
+            artifacts=materialized_artifacts,
             errors=[] if response.success else [response.stderr or "mcp browser execution failed"],
         )
 
 
-def create_browser_executor(executor_name: str, *, fake_outcome: str = "passed", mcp_endpoint: str | None = None, mcp_timeout_seconds: float = 5.0) -> BrowserExecutor:
+def create_browser_executor(
+    executor_name: str,
+    *,
+    fake_outcome: str = "passed",
+    mcp_command: str | None = None,
+    mcp_args: list[str] | None = None,
+    mcp_tool_name: str = "browser_validate_ui",
+    mcp_timeout_seconds: float = 5.0,
+) -> BrowserExecutor:
     if executor_name == "fake":
         return FakeBrowserExecutor(outcome=fake_outcome)
     if executor_name == "mcp":
-        return MCPBrowserExecutor(MCPBrowserAdapter(endpoint=mcp_endpoint, timeout_seconds=mcp_timeout_seconds))
+        return MCPBrowserExecutor(
+            MCPBrowserAdapter(
+                command=mcp_command,
+                args=mcp_args,
+                tool_name=mcp_tool_name,
+                timeout_seconds=mcp_timeout_seconds,
+            )
+        )
     return UnavailableBrowserExecutor()

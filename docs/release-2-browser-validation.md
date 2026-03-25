@@ -19,8 +19,27 @@ Current slice boundaries:
 - The bundled sample SUT now exposes a minimal UI page at `/widgets/ui`.
 - Browser execution now runs through a `BrowserExecutor` boundary.
 - A fake/local executor supports tests and development.
-- An MCP-backed adapter boundary exists, but live connectivity remains optional.
+- An MCP-backed adapter boundary exists as a narrow optional stdio-based demo path, but live connectivity remains optional.
 - When no browser executor is configured, browser behavior remains deterministic and non-breaking.
+- Skipped browser execution does not change a fully passing or fully failing API/Robot result; it is treated as non-participating for overall status.
 - Existing Release 1 callers remain compatible when the browser flag is omitted.
+
+Current MCP demo support:
+
+- `BROWSER_EXECUTOR=mcp` enables the real MCP-backed browser executor path.
+- `MCP_BROWSER_COMMAND` points to the stdio MCP server process to launch.
+- `MCP_BROWSER_ARGS_JSON` provides the command arguments as a JSON array string.
+- `MCP_BROWSER_TOOL_NAME` defaults to `browser_validate_ui` and keeps the integration narrow.
+- The generated browser validation artifact is sent to the MCP tool as structured JSON plus the sample SUT base URL.
+- The executor materializes returned artifacts into the run directory, including `browser/browser_execution.log`, `browser/browser_result.json`, and `browser/browser_screenshot.png` when the MCP server returns one.
+- If MCP startup, timeout, protocol exchange, or artifact materialization fails, browser validation deterministically falls back to `skipped` without breaking the API and Robot paths.
+
+Minimal demo configuration:
+
+1. Set `BROWSER_EXECUTOR=mcp`.
+2. Set `MCP_BROWSER_COMMAND` to the browser MCP server executable.
+3. Set `MCP_BROWSER_ARGS_JSON` to a JSON array of arguments required by that server.
+4. Keep `enable_browser_validation=true` in the run request.
+5. Start the sample SUT and platform API, then submit the existing workflow request as normal.
 
 This keeps Release 2 narrow and demonstrable without introducing a generalized workflow engine, background workers, or live retrieval features.

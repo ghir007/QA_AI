@@ -20,6 +20,18 @@ Release 1 accepts a structured API feature validation request, generates determi
 3. Start the platform API.
 4. Submit a workflow request to `/runs`.
 
+## Optional MCP Browser Demo
+
+Release 2 keeps browser validation optional and off by default. The MCP path is a narrow optional stdio-based demo integration for the sample UI flow:
+
+1. Set `BROWSER_EXECUTOR=mcp`.
+2. Set `MCP_BROWSER_COMMAND` to a stdio MCP server executable.
+3. Set `MCP_BROWSER_ARGS_JSON` to a JSON array string for that server's arguments.
+4. Optionally override `MCP_BROWSER_TOOL_NAME` if your MCP server exposes a different narrow browser-validation tool.
+5. Submit the same `/runs` request with `enable_browser_validation=true`.
+
+When configured, the platform still uses the same workflow contract and writes browser artifacts into the run directory beside the Python and Robot evidence. If MCP startup, timeout, protocol exchange, or artifact materialization fails, browser validation deterministically falls back to `skipped` and the API/Robot workflow remains unchanged.
+
 ## Repository Layout
 
 - `src/agentic_qa/` main platform source

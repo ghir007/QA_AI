@@ -113,7 +113,7 @@ def test_api_feature_validation_browser_requested_marks_partial_success(tmp_path
         response = client.post("/runs", json=payload)
         assert response.status_code == 200
         body = response.json()
-        assert body["overall_status"] == "partial_success"
+        assert body["overall_status"] == "passed"
         assert body["execution_summary"]["python"]["status"] == "passed"
         assert body["execution_summary"]["robot"]["status"] == "passed"
         assert body["execution_summary"]["browser"]["status"] == "skipped"
