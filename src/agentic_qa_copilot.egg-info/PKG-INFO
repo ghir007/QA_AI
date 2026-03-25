@@ -1,0 +1,56 @@
+Metadata-Version: 2.4
+Name: agentic-qa-copilot
+Version: 0.1.0
+Summary: QA-first agentic platform scaffold for API feature validation
+Requires-Python: >=3.12
+Description-Content-Type: text/markdown
+Requires-Dist: fastapi<1.0,>=0.115
+Requires-Dist: httpx<1.0,>=0.28
+Requires-Dist: pydantic<3.0,>=2.9
+Requires-Dist: pydantic-settings<3.0,>=2.6
+Requires-Dist: robotframework<8.0,>=7.1
+Requires-Dist: robotframework-requests<1.0,>=0.9.7
+Requires-Dist: structlog<25.0,>=24.4
+Requires-Dist: uvicorn<1.0,>=0.32
+Provides-Extra: dev
+Requires-Dist: pytest<9.0,>=8.3; extra == "dev"
+Requires-Dist: pytest-cov<6.0,>=5.0; extra == "dev"
+
+# Agentic QA Copilot
+
+Agentic QA Copilot is a QA-first Python platform scaffold focused on a single credible Release 1 workflow.
+
+Release 1 accepts a structured API feature validation request, generates deterministic Python and Robot API test skeletons, executes them against a bundled sample system under test, collects artifacts, and returns a structured summary.
+
+## Release 1 Scope
+
+- One workflow: `api_feature_validation_v1`
+- One bundled sample SUT for reproducible local and CI execution
+- One Python API execution path
+- One Robot API execution path
+- Structured artifacts, logs, and run summaries
+- MCP and RAG placeholders only
+
+## Quick Start
+
+1. Create a virtual environment and install dependencies.
+2. Start the sample SUT.
+3. Start the platform API.
+4. Submit a workflow request to `/runs`.
+
+## Repository Layout
+
+- `src/agentic_qa/` main platform source
+- `sample_sut/` bundled API under test
+- `robot/` Robot resources, generated suites, and execution outputs
+- `tests/` unit, integration, and end-to-end tests
+- `docs/` architecture and workflow notes
+- `.github/` Copilot customization files
+- `.vscode/` MCP placeholder config
+
+## Release Roadmap
+
+- Release 1: API feature validation vertical slice
+- Release 2: MCP-backed browser validation and RAG-backed retrieval seams become real integrations
+- Release 3: failure analysis and self-healing guidance
+- Release 4: risk-based orchestration and release-readiness reporting

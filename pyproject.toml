@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agentic-qa-copilot"
+version = "0.1.0"
+description = "QA-first agentic platform scaffold for API feature validation"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115,<1.0",
+    "httpx>=0.28,<1.0",
+    "pydantic>=2.9,<3.0",
+    "pydantic-settings>=2.6,<3.0",
+    "robotframework>=7.1,<8.0",
+    "robotframework-requests>=0.9.7,<1.0",
+    "structlog>=24.4,<25.0",
+    "uvicorn>=0.32,<1.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3,<9.0",
+    "pytest-cov>=5.0,<6.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests", "sample_sut/tests"]
+pythonpath = ["src", "sample_sut/src"]
+
+[tool.setuptools]
+[tool.setuptools.packages.find]
+where = ["src", "sample_sut/src"]
+include = ["agentic_qa*", "sample_sut*"]
+
+[tool.ruff]
+line-length = 100

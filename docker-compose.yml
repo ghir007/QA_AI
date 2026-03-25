@@ -1,0 +1,25 @@
+services:
+  sample-sut:
+    image: python:3.12.11-slim
+    working_dir: /workspace
+    volumes:
+      - ./:/workspace
+    command: >
+      sh -c "pip install -e .[dev] && uvicorn sample_sut.main:app --host 0.0.0.0 --port 8010"
+    ports:
+      - "8010:8010"
+
+  platform:
+    image: python:3.12.11-slim
+    working_dir: /workspace
+    volumes:
+      - ./:/workspace
+    environment:
+      SAMPLE_SUT_BASE_URL: http://sample-sut:8010
+      ARTIFACT_ROOT: /workspace/artifacts/runs
+    command: >
+      sh -c "pip install -e .[dev] && uvicorn agentic_qa.main:app --host 0.0.0.0 --port 8000"
+    ports:
+      - "8000:8000"
+    depends_on:
+      - sample-sut

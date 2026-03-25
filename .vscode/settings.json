@@ -1,0 +1,11 @@
+{
+  "python.testing.pytestEnabled": true,
+  "python.analysis.extraPaths": [
+    "src",
+    "sample_sut/src"
+  ],
+  "python.testing.pytestArgs": [
+    "tests",
+    "sample_sut/tests"
+  ]
+}
