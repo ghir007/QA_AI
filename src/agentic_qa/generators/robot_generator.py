@@ -9,7 +9,13 @@ def _slugify(value: str) -> str:
     return re.sub(r"[^a-z0-9_]+", "_", value.lower()).strip("_")
 
 
-def build_robot_suite_content(request: FeatureValidationRequest) -> tuple[str, str]:
+def _render_robot_context_comment(retrieved_context: str | None) -> str:
+    if not retrieved_context:
+        return ""
+    return "\n".join(f"# {line}" if line else "#" for line in retrieved_context.splitlines()) + "\n"
+
+
+def build_robot_suite_content(request: FeatureValidationRequest, retrieved_context: str | None = None) -> tuple[str, str]:
     feature_slug = _slugify(request.feature_name)
     filename = f"{feature_slug}.robot"
     negative_cases = request.negative_cases[:2]
@@ -22,8 +28,10 @@ def build_robot_suite_content(request: FeatureValidationRequest) -> tuple[str, s
     Should Be True    ${{response.status_code}} >= 400'''
         )
 
+    context_comment = _render_robot_context_comment(retrieved_context)
+
     content = f'''
-*** Settings ***
+{context_comment}*** Settings ***
 Resource    ${{CURDIR}}/../resources/common.resource
 
 *** Variables ***

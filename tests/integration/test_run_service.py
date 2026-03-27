@@ -5,10 +5,13 @@ import pytest
 from fastapi.testclient import TestClient
 
 from agentic_qa.adapters.mcp_browser_adapter import MCPBrowserAdapter
+from agentic_qa.adapters.rag_placeholder import create_local_rag_adapter
 from agentic_qa.domain.models import ExecutionMetrics
 from agentic_qa.domain.models import FeatureValidationRequest, TargetEndpoint
 from agentic_qa.execution.browser_executor import MCPBrowserExecutor, FakeBrowserExecutor, UnavailableBrowserExecutor
+from agentic_qa.failure_analysis.rule_based import RuleBasedFailureAnalyzer
 from agentic_qa.orchestration.run_service import RunService
+from agentic_qa.remediation.rule_based import RuleBasedRemediationAdvisor
 from agentic_qa.storage.artifact_store import ArtifactStore
 from agentic_qa.storage.run_store import RunStore
 from sample_sut.main import app as sut_app
@@ -24,6 +27,14 @@ def _failed_metrics() -> ExecutionMetrics:
 
 class StubSettings:
     sample_sut_base_url = "http://127.0.0.1:8010"
+    enable_rag_context = False
+    rag_source_root = Path("docs/rag-seeds")
+    rag_vector_store_path = None
+    rag_chunk_size = 320
+    rag_chunk_overlap = 64
+    rag_top_k = 3
+    analyze_failures = False
+    enable_remediation = False
 
 
 def _build_request(
@@ -142,6 +153,69 @@ def test_run_service_keeps_browser_out_of_summary_when_disabled(service_factory,
         "generated_python_test",
         "generated_robot_suite",
     )
+
+
+def test_run_service_injects_retrieved_context_when_rag_adapter_is_enabled(service_factory, monkeypatch) -> None:
+    request = _build_request(request_id="req-rag-001", negative_cases=["invalid_auth"])
+
+    _stub_api_and_robot_success(monkeypatch)
+    source_root = Path(__file__).resolve().parents[2] / "docs" / "rag-seeds"
+    rag_adapter = create_local_rag_adapter(source_root, top_k=1)
+    service, artifact_root = service_factory()
+    service.rag_adapter = rag_adapter
+
+    summary = service.execute(request)
+
+    generated_python = artifact_root / summary.artifacts["generated_python_test"]
+    generated_robot = artifact_root / summary.artifacts["generated_robot_suite"]
+    assert "Retrieved QA context:" in generated_python.read_text(encoding="utf-8")
+    assert "Retrieved QA context:" in generated_robot.read_text(encoding="utf-8")
+
+
+def test_run_service_persists_failure_analysis_when_enabled(service_factory, monkeypatch) -> None:
+    request = _build_request(request_id="req-failure-analysis-001", negative_cases=["invalid_auth"])
+
+    _stub_api_and_robot_success(monkeypatch)
+    service, artifact_root = service_factory()
+    service.failure_analyzer = RuleBasedFailureAnalyzer()
+
+    summary = service.execute(request)
+
+    assert summary.failure_analysis is not None
+    assert summary.failure_analysis.classification == "clean"
+    assert "failure_analysis" in summary.artifacts
+    assert (artifact_root / summary.artifacts["failure_analysis"]).exists()
+
+
+def test_run_service_persists_remediation_plan_when_enabled(service_factory, monkeypatch) -> None:
+    request = _build_request(request_id="req-remediation-001", negative_cases=["invalid_auth"])
+
+    _stub_api_and_robot_success(monkeypatch)
+    service, artifact_root = service_factory()
+    service.failure_analyzer = RuleBasedFailureAnalyzer()
+    service.remediation_advisor = RuleBasedRemediationAdvisor()
+
+    summary = service.execute(request)
+
+    assert summary.failure_analysis is not None
+    assert summary.remediation_plan is not None
+    assert summary.remediation_plan.actions == []
+    assert "remediation_plan" in summary.artifacts
+    assert (artifact_root / summary.artifacts["remediation_plan"]).exists()
+
+
+def test_run_service_skips_remediation_when_failure_analysis_is_disabled(service_factory, monkeypatch) -> None:
+    request = _build_request(request_id="req-remediation-guard-001", negative_cases=["invalid_auth"])
+
+    _stub_api_and_robot_success(monkeypatch)
+    service, artifact_root = service_factory()
+    service.remediation_advisor = RuleBasedRemediationAdvisor()
+
+    summary = service.execute(request)
+
+    assert summary.failure_analysis is None
+    assert summary.remediation_plan is None
+    assert "remediation_plan" not in summary.artifacts
 
 
 @pytest.mark.parametrize(

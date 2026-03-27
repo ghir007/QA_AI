@@ -123,3 +123,66 @@ def test_api_feature_validation_browser_requested_marks_partial_success(tmp_path
     finally:
         server.terminate()
         server.wait(timeout=10)
+
+
+def test_release_readiness_returns_summary_when_enabled(tmp_path) -> None:
+    os.environ["ARTIFACT_ROOT"] = str(tmp_path / "runs")
+    os.environ["SAMPLE_SUT_BASE_URL"] = "http://127.0.0.1:8010"
+    os.environ["ENABLE_RELEASE_ORCHESTRATION"] = "true"
+    env = os.environ.copy()
+    server = subprocess.Popen(
+        [
+            sys.executable,
+            "-m",
+            "uvicorn",
+            "sample_sut.main:app",
+            "--host",
+            "127.0.0.1",
+            "--port",
+            "8010",
+        ],
+        env=env,
+    )
+
+    try:
+        _wait_for_port("127.0.0.1", 8010)
+        client = TestClient(create_app())
+        payload = {
+            "request_id": "req-release-001",
+            "feature_name": "create widget",
+            "feature_description": "validate widget creation",
+            "target_endpoint": {"path": "/api/v1/widgets", "method": "POST"},
+            "expected_status_code": 201,
+            "request_payload_example": {"name": "smoke-widget", "priority": "high"},
+            "expected_response_fields": ["id", "name", "priority", "status"],
+            "negative_cases": ["invalid_auth"],
+            "execution_mode": "both",
+            "tags": ["smoke"],
+        }
+
+        run_response = client.post("/runs", json=payload)
+        assert run_response.status_code == 200
+        run_body = run_response.json()
+
+        readiness_response = client.get(f"/release-readiness?run_ids={run_body['run_id']}")
+        assert readiness_response.status_code == 200
+        readiness_body = readiness_response.json()
+        assert readiness_body["total_requests"] == 1
+        assert readiness_body["scored_requests"][0]["request_id"] == "req-release-001"
+        assert readiness_body["recommended_suite"] in {"smoke_only", "regression_subset", "full_suite"}
+    finally:
+        server.terminate()
+        server.wait(timeout=10)
+        os.environ.pop("ENABLE_RELEASE_ORCHESTRATION", None)
+
+
+def test_release_readiness_returns_404_when_disabled(tmp_path) -> None:
+    os.environ["ARTIFACT_ROOT"] = str(tmp_path / "runs")
+    os.environ["SAMPLE_SUT_BASE_URL"] = "http://127.0.0.1:8010"
+    os.environ.pop("ENABLE_RELEASE_ORCHESTRATION", None)
+
+    client = TestClient(create_app())
+    response = client.get("/release-readiness?run_ids=missing-run")
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "release orchestration is disabled"

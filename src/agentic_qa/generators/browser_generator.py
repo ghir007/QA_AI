@@ -10,7 +10,11 @@ def _slugify(value: str) -> str:
     return re.sub(r"[^a-z0-9_]+", "_", value.lower()).strip("_")
 
 
-def build_browser_validation_content(request: FeatureValidationRequest, sut_base_url: str) -> tuple[str, str]:
+def build_browser_validation_content(
+    request: FeatureValidationRequest,
+    sut_base_url: str,
+    retrieved_context: str | None = None,
+) -> tuple[str, str]:
     feature_slug = _slugify(request.feature_name)
     filename = f"browser_validation_{feature_slug}.json"
     payload = {
@@ -32,4 +36,6 @@ def build_browser_validation_content(request: FeatureValidationRequest, sut_base
             "result_text": "Widget created: widget-001",
         },
     }
+    if retrieved_context:
+        payload["retrieved_context"] = retrieved_context
     return filename, json.dumps(payload, indent=2) + "\n"

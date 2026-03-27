@@ -1,0 +1,36 @@
+{
+  "path": "/api/v1/widgets",
+  "method": "POST",
+  "headers": {
+    "X-API-Key": "demo-key"
+  },
+  "request": {
+    "name": {
+      "type": "string",
+      "minLength": 3
+    },
+    "priority": {
+      "type": "string",
+      "enum": [
+        "low",
+        "normal",
+        "high"
+      ],
+      "default": "normal"
+    }
+  },
+  "response": {
+    "statusCode": 201,
+    "fields": [
+      "id",
+      "name",
+      "priority",
+      "status"
+    ],
+    "statusValue": "created"
+  },
+  "errorCases": {
+    "invalid_api_key": 401,
+    "invalid_priority": 422
+  }
+}

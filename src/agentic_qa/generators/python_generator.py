@@ -9,7 +9,18 @@ def _slugify(value: str) -> str:
     return re.sub(r"[^a-z0-9_]+", "_", value.lower()).strip("_")
 
 
-def build_python_test_content(request: FeatureValidationRequest, sut_base_url: str) -> tuple[str, str]:
+def _render_python_context_comment(retrieved_context: str | None) -> str:
+    if not retrieved_context:
+        return ""
+    lines = [f"# {line}" if line else "#" for line in retrieved_context.splitlines()]
+    return "\n".join(lines) + "\n\n"
+
+
+def build_python_test_content(
+    request: FeatureValidationRequest,
+    sut_base_url: str,
+    retrieved_context: str | None = None,
+) -> tuple[str, str]:
     feature_slug = _slugify(request.feature_name)
     filename = f"test_api_{feature_slug}.py"
     negative_cases = request.negative_cases[:2]
@@ -28,8 +39,10 @@ def test_{feature_slug}_negative_{index}() -> None:
 '''.strip()
         )
 
+    context_comment = _render_python_context_comment(retrieved_context)
+
     content = f'''
-import httpx
+{context_comment}import httpx
 
 
 BASE_URL = "{sut_base_url}"

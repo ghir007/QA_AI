@@ -1,0 +1,7 @@
+Known sample SUT failure patterns:
+
+1. Robot suites fail before exercising the endpoint when the shared resource file is missing or referenced from the wrong relative path.
+2. Browser validation can be skipped deterministically when no browser executor is configured.
+3. MCP-backed browser validation can be skipped deterministically on startup failure, timeout, malformed protocol output, invalid artifact payloads, or malformed browser result JSON.
+4. Invalid API keys return `401` with detail `invalid api key`.
+5. Invalid widget priorities return `422` with detail `invalid priority`.

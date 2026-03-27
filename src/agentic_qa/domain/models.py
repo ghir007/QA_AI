@@ -50,6 +50,43 @@ class ExecutionMetrics(BaseModel):
     exit_code: int = 0
 
 
+class FailureReport(BaseModel):
+    classification: str
+    confidence: str
+    explanation: str
+    suggested_next_action: str
+
+
+class RemediationAction(BaseModel):
+    action_type: str
+    description: str
+    automated: bool
+    priority: str
+
+
+class RemediationPlan(BaseModel):
+    actions: list[RemediationAction] = Field(default_factory=list)
+    requires_human_approval: bool
+    advisory_note: str
+
+
+class RiskScore(BaseModel):
+    request_id: str
+    feature_name: str
+    risk_level: str
+    risk_score: float
+    risk_factors: list[str] = Field(default_factory=list)
+
+
+class ReleaseReadinessSummary(BaseModel):
+    scored_requests: list[RiskScore] = Field(default_factory=list)
+    recommended_suite: str
+    release_recommendation: str
+    advisory_note: str
+    blocking_risk_count: int
+    total_requests: int
+
+
 class RunSummary(BaseModel):
     run_id: str
     workflow_name: str
@@ -59,6 +96,8 @@ class RunSummary(BaseModel):
     execution_summary: dict[str, ExecutionMetrics]
     artifacts: dict[str, str]
     errors: list[str] = Field(default_factory=list)
+    failure_analysis: FailureReport | None = None
+    remediation_plan: RemediationPlan | None = None
     started_at: datetime
     finished_at: datetime
 
