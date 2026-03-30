@@ -20,6 +20,8 @@ Release 1 accepts a structured API feature validation request, generates determi
 3. Start the platform API.
 4. Submit a workflow request to `/runs`.
 
+For the full operator workflow, environment variables, request examples, and test commands, see `README_USAGE.md`.
+
 ## Optional MCP Browser Demo
 
 Release 2 keeps browser validation optional and off by default. The MCP path is a narrow optional stdio-based demo integration for the sample UI flow:
